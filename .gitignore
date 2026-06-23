@@ -27,3 +27,6 @@ frontend/out/
 IMPLEMENTATION.md
 IMPLEMENTATION.pdf
 
+# Clarinet generated artifacts
+contracts/deployments/default.simnet-plan.yaml
+

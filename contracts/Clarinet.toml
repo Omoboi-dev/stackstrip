@@ -5,29 +5,29 @@ authors = []
 telemetry = false
 cache_dir = "./.cache"
 
-[contracts.counter]
-path = "contracts/counter.clar"
-clarity_version = 4
-epoch = "latest"
-
 [contracts.sip-010-trait]
 path = "contracts/sip-010-trait.clar"
-clarity_version = 4
+clarity_version = 3
 epoch = "latest"
 
 [contracts.mock-ststx]
 path = "contracts/mock-ststx.clar"
-clarity_version = 4
+clarity_version = 3
 epoch = "latest"
 
 [contracts.pt-token]
 path = "contracts/pt-token.clar"
-clarity_version = 4
+clarity_version = 3
 epoch = "latest"
 
 [contracts.yt-token]
 path = "contracts/yt-token.clar"
-clarity_version = 4
+clarity_version = 3
+epoch = "latest"
+
+[contracts.yield-market]
+path = "contracts/yield-market.clar"
+clarity_version = 3
 epoch = "latest"
 
 [repl.costs_version]

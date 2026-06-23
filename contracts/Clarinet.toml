@@ -30,5 +30,10 @@ path = "contracts/yield-market.clar"
 clarity_version = 3
 epoch = "latest"
 
+[contracts.amm]
+path = "contracts/amm.clar"
+clarity_version = 3
+epoch = "latest"
+
 [repl.costs_version]
 version = 2

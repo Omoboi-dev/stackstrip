@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, ArrowDown, Info, Droplet, ExternalLink, Loader2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useWallet } from '../lib/wallet';
-import { deposit, swapBaseForPt, swapPtForBase, faucet, getBalance, getReserves, explorerTx } from '../lib/stacks';
+import { deposit, swapBaseForPt, swapPtForBase, faucet, getBalance, getReserves, getMarketInfo, settle, redeemPt, redeemYt, explorerTx } from '../lib/stacks';
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
@@ -33,11 +33,15 @@ export function MarketDetail() {
   const [error, setError] = useState<string | null>(null);
   const [bal, setBal] = useState({ base: 0, pt: 0, yt: 0 });
   const [reserves, setReserves] = useState({ base: 0, pt: 0 });
+  const [market, setMarket] = useState({ settled: false, matured: false, maturity: 0 });
+  const [redeemAmt, setRedeemAmt] = useState('');
 
   const loadData = useCallback(async () => {
     try {
       const r = await getReserves();
       setReserves({ base: r.base, pt: r.pt });
+      const info = await getMarketInfo();
+      setMarket({ settled: info.settled, matured: info.matured, maturity: info.maturity });
       if (address) {
         const [base, pt, yt] = await Promise.all([
           getBalance('mockStstx', address),
@@ -71,6 +75,7 @@ export function MarketDetail() {
   };
 
   const amt = Number(amount) || 0;
+  const rAmt = Number(redeemAmt) || 0;
   const handleFaucet = () => run(() => faucet(address!));
   const handleAction = () => {
     if (!connected || !address) return connectWallet();
@@ -78,6 +83,9 @@ export function MarketDetail() {
     if (tradeAction === 'buy') return run(() => swapBaseForPt(address, amt));
     return run(() => swapPtForBase(address, amt));
   };
+  const handleSettle = () => run(() => settle());
+  const handleRedeemPt = () => run(() => redeemPt(rAmt));
+  const handleRedeemYt = () => run(() => redeemYt(rAmt));
 
   const actionLabel = !connected
     ? 'Connect Wallet'
@@ -221,15 +229,63 @@ export function MarketDetail() {
               >
                 Trade
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('mint')}
                 className={`flex-1 py-4 text-label-sm ${activeTab === 'mint' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-on-surface-variant hover:bg-surface-variant/30'}`}
               >
                 Mint/Split
               </button>
+              <button
+                onClick={() => setActiveTab('redeem')}
+                className={`flex-1 py-4 text-label-sm ${activeTab === 'redeem' ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-on-surface-variant hover:bg-surface-variant/30'}`}
+              >
+                Redeem
+              </button>
             </div>
 
             <div className="p-6 flex flex-col gap-6">
+              {activeTab === 'redeem' ? (
+                <div className="flex flex-col gap-5">
+                  {!market.matured ? (
+                    <div className="bg-surface-container-lowest border border-border-subtle rounded-lg p-5 text-center">
+                      <p className="text-body-md text-on-surface">This market has not matured yet.</p>
+                      <p className="text-data-md text-[12px] text-on-surface-variant mt-1">Redemption opens at block {market.maturity.toLocaleString()}.</p>
+                    </div>
+                  ) : !market.settled ? (
+                    <>
+                      <p className="text-body-md text-on-surface-variant leading-snug">The market has matured. Settle it once to freeze the final rate, then PT and YT become redeemable.</p>
+                      <button onClick={handleSettle} disabled={busy} className="w-full py-4 rounded-lg bg-primary text-on-primary text-headline-md text-[16px] uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-70">
+                        {busy && <Loader2 className="w-5 h-5 animate-spin" />} Settle Market
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-surface-container-lowest rounded-lg p-4 border border-border-subtle">
+                        <label className="text-label-sm text-on-surface-variant block mb-1">Amount to redeem</label>
+                        <div className="flex items-center justify-between">
+                          <input type="text" inputMode="decimal" value={redeemAmt} onChange={(e) => setRedeemAmt(e.target.value.replace(/[^0-9.]/g, ''))} className="bg-transparent border-none outline-none text-display-lg-mobile text-on-surface p-0 w-full" placeholder="0.00" />
+                        </div>
+                        <div className="flex justify-end gap-3 mt-1">
+                          <button onClick={() => setRedeemAmt(String(bal.pt))} className="text-[12px] text-primary">PT: {fmt(bal.pt)}</button>
+                          <button onClick={() => setRedeemAmt(String(bal.yt))} className="text-[12px] text-secondary">YT: {fmt(bal.yt)}</button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button onClick={handleRedeemPt} disabled={busy} className="py-3 rounded-lg bg-primary/10 border border-primary/30 text-primary text-label-sm hover:bg-primary hover:text-on-primary transition-colors disabled:opacity-60">Redeem PT</button>
+                        <button onClick={handleRedeemYt} disabled={busy} className="py-3 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary text-label-sm hover:bg-secondary hover:text-on-primary transition-colors disabled:opacity-60">Redeem YT</button>
+                      </div>
+                      <p className="text-[12px] text-on-surface-variant text-center">PT redeems for principal, YT redeems for accrued yield.</p>
+                    </>
+                  )}
+                  {txid && (
+                    <a href={explorerTx(txid)} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 text-[13px] text-secondary hover:text-on-surface transition-colors">
+                      Transaction submitted, view on explorer <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                  {error && <p className="text-[13px] text-center text-red-400">{error}</p>}
+                </div>
+              ) : (
+                <>
               {/* Buy/Sell */}
               <div className="flex bg-surface-container-lowest p-1 rounded-lg border border-border-subtle">
                 <button 
@@ -359,6 +415,8 @@ export function MarketDetail() {
                 </a>
               )}
               {error && <p className="text-[13px] text-center text-red-400">{error}</p>}
+              </>
+              )}
             </div>
           </div>
         </motion.div>

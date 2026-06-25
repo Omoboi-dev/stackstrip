@@ -69,18 +69,21 @@ export async function quoteBaseForPtMicro(microIn: bigint): Promise<bigint> {
 }
 
 export async function getMarketInfo() {
-  const [maturity, startRate, settleRate, settled, rate] = await Promise.all([
+  const [maturity, startRate, settleRate, settled, matured, rate] = await Promise.all([
     read('yield-market', 'get-maturity'),
     read('yield-market', 'get-start-rate'),
     read('yield-market', 'get-settle-rate'),
     read('yield-market', 'is-settled'),
+    read('yield-market', 'is-matured'),
     read('mock-ststx', 'get-exchange-rate'),
   ]);
+  const toBool = (v: any) => Boolean(v?.value ?? v);
   return {
     maturity: asNum(maturity),
     startRate: asNum(startRate),
     settleRate: asNum(settleRate),
-    settled: Boolean((settled as any)?.value ?? settled),
+    settled: toBool(settled),
+    matured: toBool(matured),
     exchangeRate: asNum(rate),
   };
 }
@@ -194,6 +197,42 @@ export async function removeLiquidity(lpTokens: number, slippagePct = 1) {
       Pc.principal(C.amm).willSendGte((baseOut * factor) / 10000n).ft(C.mockStstx, FT.mockStstx),
       Pc.principal(C.amm).willSendGte((ptOut * factor) / 10000n).ft(C.pt, FT.pt),
     ],
+  );
+}
+
+// ---------- redemption (after maturity) ----------
+// Settle freezes the exchange rate at maturity. No token movement.
+export function settle() {
+  return call('yield-market', 'settle', []);
+}
+
+// Redeem PT for principal: PT is burned (no transfer), the market returns stSTX shares.
+export async function redeemPt(tokens: number) {
+  const amount = toMicro(tokens);
+  const info = await getMarketInfo();
+  const sr = BigInt(info.settleRate || 1);
+  const start = BigInt(info.startRate || 1);
+  const minShares = sr > 0n ? ((amount * start) / sr) * 99n / 100n : 0n;
+  return call(
+    'yield-market',
+    'redeem-pt',
+    [Cl.uint(amount)],
+    [Pc.principal(C.market).willSendGte(minShares).ft(C.mockStstx, FT.mockStstx)],
+  );
+}
+
+// Redeem YT for the accrued yield: YT is burned, the market returns stSTX shares.
+export async function redeemYt(tokens: number) {
+  const amount = toMicro(tokens);
+  const info = await getMarketInfo();
+  const sr = BigInt(info.settleRate || 1);
+  const start = BigInt(info.startRate || 1);
+  const minShares = sr > 0n ? ((amount * (sr - start)) / sr) * 99n / 100n : 0n;
+  return call(
+    'yield-market',
+    'redeem-yt',
+    [Cl.uint(amount)],
+    [Pc.principal(C.market).willSendGte(minShares).ft(C.mockStstx, FT.mockStstx)],
   );
 }
 

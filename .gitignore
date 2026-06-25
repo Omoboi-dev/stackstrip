@@ -30,3 +30,7 @@ IMPLEMENTATION.pdf
 # Clarinet generated artifacts
 contracts/deployments/default.simnet-plan.yaml
 
+# Secrets: these hold real deployer seed phrases
+contracts/settings/Testnet.toml
+contracts/settings/Mainnet.toml
+

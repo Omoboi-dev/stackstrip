@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Droplet, Loader2, ExternalLink } from 'lucide-react';
+import { Droplet, Loader2 } from 'lucide-react';
 import { CountUp } from '../components/ui/CountUp';
 import { useWallet } from '../lib/wallet';
-import { getReserves, getLpShares, getTotalLp, addLiquidity, removeLiquidity, explorerTx } from '../lib/stacks';
+import { useToast } from '../components/ui/Toast';
+import { getReserves, getLpShares, getTotalLp, getBalance, addLiquidity, removeLiquidity, explorerTx } from '../lib/stacks';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -17,20 +18,28 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 
 export function Liquidity() {
   const { address, connected, connectWallet } = useWallet();
+  const { push } = useToast();
   const [reserves, setReserves] = useState({ base: 0, pt: 0 });
   const [lp, setLp] = useState(0);
   const [totalLp, setTotalLp] = useState(0);
   const [addBase, setAddBase] = useState('100');
   const [removeLp, setRemoveLp] = useState('');
   const [busy, setBusy] = useState(false);
-  const [txid, setTxid] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [bal, setBal] = useState({ base: 0, pt: 0 });
 
   const load = useCallback(async () => {
     const [r, t] = await Promise.all([getReserves(), getTotalLp()]);
     setReserves({ base: r.base, pt: r.pt });
     setTotalLp(t.lp);
-    if (address) setLp(await getLpShares(address));
+    if (address) {
+      const [shares, base, pt] = await Promise.all([
+        getLpShares(address),
+        getBalance('mockStstx', address),
+        getBalance('pt', address),
+      ]);
+      setLp(shares);
+      setBal({ base, pt });
+    }
   }, [address]);
 
   useEffect(() => {
@@ -39,14 +48,13 @@ export function Liquidity() {
 
   const run = async (fn: () => Promise<any>) => {
     setBusy(true);
-    setError(null);
-    setTxid(null);
     try {
       const res: any = await fn();
-      setTxid(res?.txid ?? res?.txId ?? null);
+      const tx = res?.txid ?? res?.txId ?? null;
+      push({ type: 'info', message: 'Transaction submitted', href: tx ? explorerTx(tx) : undefined });
       setTimeout(() => load().catch(() => {}), 8000);
     } catch (e: any) {
-      setError(e?.message ?? 'Transaction cancelled');
+      push({ type: 'error', message: e?.message ?? 'Transaction cancelled' });
     } finally {
       setBusy(false);
     }
@@ -56,9 +64,15 @@ export function Liquidity() {
   const poolShare = totalLp > 0 ? (lp / totalLp) * 100 : 0;
   const ptPerBase = reserves.base > 0 ? reserves.pt / reserves.base : 1;
 
+  const ptNeeded = (Number(addBase) || 0) * ptPerBase;
+  const maxAddable = Math.min(bal.base, ptPerBase > 0 ? bal.pt / ptPerBase : bal.base);
+
   const handleAdd = () => {
     if (!connected || !address) return connectWallet();
     const base = Number(addBase) || 0;
+    if (base <= 0) return push({ type: 'error', message: 'Enter an amount to add.' });
+    if (base > bal.base) return push({ type: 'error', message: `Not enough stSTX. You have ${fmt(bal.base)}.` });
+    if (ptNeeded > bal.pt) return push({ type: 'error', message: `Needs about ${fmt(ptNeeded)} PT to pair, but you have ${fmt(bal.pt)}. Lower the amount or tap Max.` });
     const maxPt = Math.max(base * ptPerBase * 1.1, base); // buffer to cover the pulled PT
     return run(() => addLiquidity(address, base, maxPt));
   };
@@ -120,10 +134,16 @@ export function Liquidity() {
                   className="bg-transparent border-none outline-none text-data-lg text-on-surface w-full"
                   placeholder="0.00"
                 />
-                <span className="text-label-sm text-on-surface shrink-0">stSTX</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => setAddBase(String(Math.floor(maxAddable * 100) / 100))} className="text-[12px] text-secondary">MAX</button>
+                  <span className="text-label-sm text-on-surface">stSTX</span>
+                </div>
               </div>
+              <p className={`text-[12px] mb-1 ${ptNeeded > bal.pt ? 'text-red-400' : 'text-on-surface-variant'}`}>
+                Pairs with about {fmt(ptNeeded)} PT at the current ratio.
+              </p>
               <p className="text-[12px] text-on-surface-variant mb-3">
-                Pairs with about {fmt((Number(addBase) || 0) * ptPerBase)} PT at the current ratio.
+                Balance: {fmt(bal.base)} stSTX · {fmt(bal.pt)} PT
               </p>
               <button onClick={handleAdd} disabled={busy} className="w-full py-3 rounded-lg bg-primary/10 border border-primary/30 text-primary text-label-sm hover:bg-primary hover:text-on-primary transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
                 {busy && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -153,12 +173,6 @@ export function Liquidity() {
             </div>
           </div>
 
-          {txid && (
-            <a href={explorerTx(txid)} target="_blank" rel="noreferrer" className="mt-4 flex items-center justify-center gap-2 text-[13px] text-secondary hover:text-on-surface transition-colors">
-              Transaction submitted, view on explorer <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          )}
-          {error && <p className="mt-4 text-[13px] text-center text-red-400">{error}</p>}
         </motion.div>
       </motion.div>
     </div>

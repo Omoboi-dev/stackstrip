@@ -40,16 +40,43 @@ function asNum(v: any): number {
   return 0;
 }
 
+// Short-lived cache + retry so a flaky/rate-limited public node does not
+// blank out the UI. Cached values are reused on total failure rather than
+// falling back to zero.
+const readCache = new Map<string, { t: number; v: any }>();
+const READ_TTL = 5000;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export function clearReadCache() {
+  readCache.clear();
+}
+
 async function read(name: string, fn: string, args: ClarityValue[] = []) {
-  const r = await fetchCallReadOnlyFunction({
-    contractAddress: DEPLOYER,
-    contractName: name,
-    functionName: fn,
-    functionArgs: args,
-    network: NETWORK,
-    senderAddress: DEPLOYER,
-  });
-  return cvToValue(r);
+  const key = `${name}.${fn}.${args.map((a: any) => String(a?.value ?? '')).join(',')}`;
+  const hit = readCache.get(key);
+  if (hit && Date.now() - hit.t < READ_TTL) return hit.v;
+
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetchCallReadOnlyFunction({
+        contractAddress: DEPLOYER,
+        contractName: name,
+        functionName: fn,
+        functionArgs: args,
+        network: NETWORK,
+        senderAddress: DEPLOYER,
+      });
+      const v = cvToValue(r);
+      readCache.set(key, { t: Date.now(), v });
+      return v;
+    } catch (e) {
+      lastErr = e;
+      await sleep(400 * (attempt + 1));
+    }
+  }
+  if (hit) return hit.v; // serve last good value instead of zeroing the UI
+  throw lastErr;
 }
 
 // ---------- reads (return whole-token numbers) ----------
@@ -234,6 +261,36 @@ export async function redeemYt(tokens: number) {
     [Cl.uint(amount)],
     [Pc.principal(C.market).willSendGte(minShares).ft(C.mockStstx, FT.mockStstx)],
   );
+}
+
+// ---------- activity feed ----------
+export interface Activity {
+  txid: string;
+  contract: string;
+  fn: string;
+  status: string;
+  time: number;
+}
+
+// Recent contract-call transactions by this user against the Stackstrip contracts.
+export async function getRecentActivity(address: string): Promise<Activity[]> {
+  const url = `https://api.testnet.hiro.so/extended/v1/address/${address}/transactions?limit=20`;
+  try {
+    const res = await fetch(url).then((r) => r.json());
+    const rows: any[] = (res.results || []).map((t: any) => t.tx ?? t);
+    return rows
+      .filter((t) => t.tx_type === 'contract_call' && String(t.contract_call?.contract_id || '').startsWith(DEPLOYER))
+      .slice(0, 10)
+      .map((t) => ({
+        txid: t.tx_id,
+        contract: String(t.contract_call.contract_id).split('.')[1],
+        fn: t.contract_call.function_name,
+        status: t.tx_status,
+        time: t.burn_block_time ?? t.receipt_time ?? 0,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export { Cl };

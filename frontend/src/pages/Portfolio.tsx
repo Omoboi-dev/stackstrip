@@ -1,11 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Bitcoin, Wallet, Zap, Coins } from 'lucide-react';
+import { Bitcoin, Wallet, Zap, Coins, ExternalLink, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { CountUp } from '../components/ui/CountUp';
 import { useWallet } from '../lib/wallet';
-import { getBalance, getMarketInfo } from '../lib/stacks';
+import { getBalance, getMarketInfo, getRecentActivity, explorerTx, type Activity } from '../lib/stacks';
+
+const fnLabel: Record<string, string> = {
+  mint: 'Faucet', deposit: 'Split', 'swap-base-for-pt': 'Buy PT', 'swap-pt-for-base': 'Sell PT',
+  'add-liquidity': 'Add Liquidity', 'remove-liquidity': 'Remove Liquidity', settle: 'Settle',
+  'redeem-pt': 'Redeem PT', 'redeem-yt': 'Redeem YT',
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -20,17 +26,20 @@ export function Portfolio() {
   const { address, connected, connectWallet } = useWallet();
   const [bal, setBal] = useState({ base: 0, pt: 0, yt: 0 });
   const [market, setMarket] = useState({ maturity: 0, settled: false });
+  const [activity, setActivity] = useState<Activity[]>([]);
 
   const load = useCallback(async () => {
     const info = await getMarketInfo();
     setMarket({ maturity: info.maturity, settled: info.settled });
     if (!address) return;
-    const [base, pt, yt] = await Promise.all([
+    const [base, pt, yt, acts] = await Promise.all([
       getBalance('mockStstx', address),
       getBalance('pt', address),
       getBalance('yt', address),
+      getRecentActivity(address),
     ]);
     setBal({ base, pt, yt });
+    setActivity(acts);
   }, [address]);
 
   useEffect(() => {
@@ -176,6 +185,38 @@ export function Portfolio() {
                 {bal.yt > 0 && (
                   <PositionRow label="YT" name="stSTX Yield Market" sub="Yield Token" color="bg-secondary" amount={bal.yt} unit="YT" maturity={maturityLabel} status={status} />
                 )}
+              </div>
+            )}
+          </motion.div>
+
+          <motion.div className="mb-stack-lg" variants={containerVariants} initial="hidden" animate="visible">
+            <h2 className="text-headline-md text-on-background mb-6">Recent Activity</h2>
+            {activity.length === 0 ? (
+              <div className="glass-card p-8 text-center text-on-surface-variant text-sm">No transactions yet.</div>
+            ) : (
+              <div className="glass-card divide-y divide-border-subtle overflow-hidden">
+                {activity.map((a) => (
+                  <a
+                    key={a.txid}
+                    href={explorerTx(a.txid)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between gap-4 p-4 hover:bg-surface-variant/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={a.status === 'success' ? 'text-secondary' : a.status === 'pending' ? 'text-on-surface-variant' : 'text-red-400'}>
+                        {a.status === 'success' ? <CheckCircle2 className="w-4 h-4" /> : a.status === 'pending' ? <Clock className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      </span>
+                      <div>
+                        <div className="text-body-md text-on-background">{fnLabel[a.fn] ?? a.fn}</div>
+                        <div className="text-label-sm text-on-surface-variant">
+                          {a.contract}{a.time ? ` · ${new Date(a.time * 1000).toLocaleString()}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-on-surface-variant" />
+                  </a>
+                ))}
               </div>
             )}
           </motion.div>

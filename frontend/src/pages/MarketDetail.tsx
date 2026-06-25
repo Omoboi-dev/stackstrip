@@ -8,18 +8,6 @@ import { deposit, swapBaseForPt, swapPtForBase, faucet, getBalance, getReserves,
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
-const data = [
-  { date: 'May 1', yield: 4.2 },
-  { date: 'May 8', yield: 4.5 },
-  { date: 'May 15', yield: 4.4 },
-  { date: 'May 22', yield: 5.2 },
-  { date: 'Jun 1', yield: 6.8 },
-  { date: 'Jun 8', yield: 8.5 },
-  { date: 'Jun 15', yield: 8.1 },
-  { date: 'Jun 22', yield: 7.6 },
-  { date: 'Today', yield: 8.42 },
-];
-
 export function MarketDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('trade');
@@ -76,6 +64,15 @@ export function MarketDetail() {
 
   const amt = Number(amount) || 0;
   const rAmt = Number(redeemAmt) || 0;
+  // PT accretes to par (1.0) at maturity; this curve is the fixed-yield path.
+  const ptPrice = reserves.pt > 0 ? reserves.base / reserves.pt : 1;
+  const chartData = Array.from({ length: 6 }, (_, i) => {
+    const t = i / 5;
+    return {
+      label: i === 0 ? 'Now' : i === 5 ? 'Maturity' : `${Math.round(t * 100)}%`,
+      price: Number((ptPrice + (1 - ptPrice) * t).toFixed(4)),
+    };
+  });
   const handleFaucet = () => run(() => faucet(address!));
   const handleAction = () => {
     if (!connected || !address) return connectWallet();
@@ -146,7 +143,7 @@ export function MarketDetail() {
             transition={{ delay: 0.1 }}
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-headline-md text-on-background">Implied Yield History</h2>
+              <h2 className="text-headline-md text-on-background">PT Price to Par</h2>
               <div className="flex bg-surface-container-highest p-1 rounded-lg border border-border-subtle">
                 {['1W', '1M', 'ALL'].map((time) => (
                   <button 
@@ -161,7 +158,7 @@ export function MarketDetail() {
             
             <div className="flex-grow w-full h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorYield" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--color-secondary)" stopOpacity={0.3}/>
@@ -169,13 +166,13 @@ export function MarketDetail() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" vertical={false} />
-                  <XAxis dataKey="date" stroke="var(--color-on-surface-variant)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                  <YAxis stroke="var(--color-on-surface-variant)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
+                  <XAxis dataKey="label" stroke="var(--color-on-surface-variant)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis stroke="var(--color-on-surface-variant)" fontSize={12} tickLine={false} axisLine={false} domain={['auto', 'auto']} tickFormatter={(val) => `${val}`} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border-subtle)', borderRadius: '8px' }}
                     itemStyle={{ color: 'var(--color-secondary)', fontFamily: 'var(--font-mono)' }}
                   />
-                  <Area type="monotone" dataKey="yield" stroke="var(--color-secondary)" strokeWidth={3} fillOpacity={1} fill="url(#colorYield)" />
+                  <Area type="monotone" dataKey="price" stroke="var(--color-secondary)" strokeWidth={3} fillOpacity={1} fill="url(#colorYield)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

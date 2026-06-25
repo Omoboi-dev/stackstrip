@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: #050505;
+  --color-surface: #111111;
+  --color-surface-dim: #0a0a0a;
+  --color-surface-bright: #222222;
+  --color-surface-container-lowest: #000000;
+  --color-surface-container-low: #0a0a0a;
+  --color-surface-container: #111111;
+  --color-surface-container-high: #1a1a1a;
+  --color-surface-container-highest: #222222;
+  
+  --color-on-background: #ffffff;
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #9ca3af;
+  
+  --color-outline: #ffffff;
+  --color-outline-variant: rgba(255, 255, 255, 0.1);
+  --color-border-subtle: rgba(255, 255, 255, 0.1);
+  
+  --color-primary: #a855f7;
+  --color-on-primary: #ffffff;
+  --color-primary-container: rgba(168, 85, 247, 0.15);
+  --color-on-primary-container: #a855f7;
+  
+  --color-secondary: #6366f1;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: rgba(99, 102, 241, 0.15);
+  --color-on-secondary-container: #6366f1;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --spacing-stack-sm: 8px;
+  --spacing-stack-md: 16px;
+  --spacing-stack-lg: 32px;
+  --spacing-gutter: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-margin-desktop: 40px;
+  --spacing-container-max: 1280px;
+
+  --radius-sm: 0.5rem;
+  --radius-DEFAULT: 1rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border-subtle);
+  }
+  
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-background);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+}
+
+@layer components {
+  /* Typography classes based on design system */
+  .text-display-lg {
+    @apply font-sans text-5xl md:text-8xl font-black tracking-tighter skew-x-[-4deg] leading-[0.85];
+  }
+  .text-display-lg-mobile {
+    @apply font-sans text-4xl md:text-6xl font-black tracking-tighter skew-x-[-4deg] leading-[0.85];
+  }
+  .text-headline-md {
+    @apply font-sans text-2xl font-bold tracking-tight;
+  }
+  .text-body-md {
+    @apply font-sans text-sm text-gray-400 leading-relaxed;
+  }
+  .text-label-sm {
+    @apply font-sans text-[10px] font-bold tracking-[0.2em] uppercase opacity-60;
+  }
+  .text-data-lg {
+    @apply font-mono text-3xl md:text-5xl font-black tracking-tighter;
+    font-variant-numeric: tabular-nums;
+  }
+  .text-data-md {
+    @apply font-mono text-xs font-bold tracking-widest opacity-80;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* UI Components */
+  .glass-card {
+    @apply bg-surface border border-border-subtle rounded-2xl shadow-2xl transition-all duration-300;
+  }
+  .glass-card:hover {
+    @apply border-outline/30;
+    box-shadow: inset 0 0 20px rgba(168, 85, 247, 0.05), 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .glass-panel {
+    @apply bg-background/80 backdrop-blur-xl border-b border-border-subtle;
+  }
+}

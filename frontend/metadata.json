@@ -1,0 +1,6 @@
+{
+  "name": "Stackstrip",
+  "description": "Institutional-grade DeFi infrastructure for yield stripping on Bitcoin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

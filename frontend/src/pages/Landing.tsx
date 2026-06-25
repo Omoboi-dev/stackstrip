@@ -1,9 +1,23 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShaderBackground } from '../components/ShaderBackground';
 import { CountUp } from '../components/ui/CountUp';
+import { getReserves, getMarketInfo } from '../lib/stacks';
 
 export function Landing() {
+  const [stats, setStats] = useState({ tvl: 0, ptPrice: 0 });
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await getReserves();
+        await getMarketInfo();
+        setStats({ tvl: r.base + r.pt, ptPrice: r.pt > 0 ? r.base / r.pt : 0 });
+      } catch {
+        // non-fatal
+      }
+    })();
+  }, []);
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -17,7 +31,7 @@ export function Landing() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
+      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }
     }
   };
 
@@ -35,7 +49,7 @@ export function Landing() {
         >
           <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary-container bg-surface-container/50 backdrop-blur-md mb-4">
             <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-            <span className="text-label-sm text-secondary">Mainnet Beta Live</span>
+            <span className="text-label-sm text-secondary">Live on Stacks Testnet</span>
           </motion.div>
           
           <motion.h1 variants={itemVariants} className="text-display-lg text-on-background max-w-4xl">
@@ -71,7 +85,7 @@ export function Landing() {
             >
               <span className="text-label-sm text-on-surface-variant mb-2">Total Value Locked</span>
               <div className="text-data-lg text-on-surface flex items-baseline gap-1">
-                <CountUp prefix="$" end={245.8} decimals={1} suffix="M" />
+                <CountUp end={stats.tvl} decimals={2} suffix=" tok" />
               </div>
             </motion.div>
             
@@ -86,7 +100,7 @@ export function Landing() {
             >
               <span className="text-label-sm text-on-surface-variant mb-2">Active Markets</span>
               <div className="text-data-lg text-on-surface">
-                <CountUp end={12} />
+                <CountUp end={1} />
               </div>
             </motion.div>
             
@@ -99,9 +113,9 @@ export function Landing() {
               transition={{ delay: 0.2 }}
               className="flex flex-col items-center md:items-start"
             >
-              <span className="text-label-sm text-on-surface-variant mb-2">Best Fixed APY</span>
+              <span className="text-label-sm text-on-surface-variant mb-2">PT Price</span>
               <div className="text-data-lg text-secondary flex items-baseline gap-1">
-                <CountUp end={9.40} decimals={2} suffix="%" />
+                <CountUp end={stats.ptPrice} decimals={4} suffix=" stSTX" />
               </div>
             </motion.div>
           </div>

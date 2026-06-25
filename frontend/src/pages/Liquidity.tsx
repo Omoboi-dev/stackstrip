@@ -1,149 +1,165 @@
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Droplet } from 'lucide-react';
+import { Droplet, Loader2, ExternalLink } from 'lucide-react';
 import { CountUp } from '../components/ui/CountUp';
+import { useWallet } from '../lib/wallet';
+import { getReserves, getLpShares, getTotalLp, addLiquidity, removeLiquidity, explorerTx } from '../lib/stacks';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
+const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 export function Liquidity() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
+  const { address, connected, connectWallet } = useWallet();
+  const [reserves, setReserves] = useState({ base: 0, pt: 0 });
+  const [lp, setLp] = useState(0);
+  const [totalLp, setTotalLp] = useState(0);
+  const [addBase, setAddBase] = useState('100');
+  const [removeLp, setRemoveLp] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [txid, setTxid] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const [r, t] = await Promise.all([getReserves(), getTotalLp()]);
+    setReserves({ base: r.base, pt: r.pt });
+    setTotalLp(t.lp);
+    if (address) setLp(await getLpShares(address));
+  }, [address]);
+
+  useEffect(() => {
+    load().catch(() => {});
+  }, [load]);
+
+  const run = async (fn: () => Promise<any>) => {
+    setBusy(true);
+    setError(null);
+    setTxid(null);
+    try {
+      const res: any = await fn();
+      setTxid(res?.txid ?? res?.txId ?? null);
+      setTimeout(() => load().catch(() => {}), 8000);
+    } catch (e: any) {
+      setError(e?.message ?? 'Transaction cancelled');
+    } finally {
+      setBusy(false);
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.4 }
-    }
-  };
+  const tvl = reserves.base + reserves.pt;
+  const poolShare = totalLp > 0 ? (lp / totalLp) * 100 : 0;
+  const ptPerBase = reserves.base > 0 ? reserves.pt / reserves.base : 1;
 
-  const pools = [
-    {
-      name: 'stSTX-MAR2027 LP',
-      type: 'Stable',
-      fee: '0.05%',
-      yourLiquidity: 2500.00,
-      poolTvl: 12.4,
-      feeApr: 12.5,
-    },
-    {
-      name: 'sBTC-DEC2026 LP',
-      type: 'Volatile',
-      fee: '0.3%',
-      yourLiquidity: 2500.00,
-      poolTvl: 8.2,
-      feeApr: 8.2,
-    }
-  ];
+  const handleAdd = () => {
+    if (!connected || !address) return connectWallet();
+    const base = Number(addBase) || 0;
+    const maxPt = Math.max(base * ptPerBase * 1.1, base); // buffer to cover the pulled PT
+    return run(() => addLiquidity(address, base, maxPt));
+  };
+  const handleRemove = () => {
+    if (!connected || !address) return connectWallet();
+    return run(() => removeLiquidity(Number(removeLp) || 0));
+  };
 
   return (
     <div className="w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-stack-lg pb-32">
-      {/* Header & Stats */}
       <div className="mb-stack-lg">
-        <motion.h1 
-          className="text-display-lg text-on-background mb-stack-md"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.h1 className="text-display-lg text-on-background mb-stack-md" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           Liquidity Provision
         </motion.h1>
-        
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 gap-gutter"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {/* Stat Card 1 */}
+
+        <motion.div className="grid grid-cols-1 md:grid-cols-2 gap-gutter" variants={containerVariants} initial="hidden" animate="visible">
           <motion.div variants={itemVariants} className="glass-card p-6 shadow-lg">
-            <h3 className="text-label-sm text-on-surface-variant mb-2">Your Liquidity</h3>
+            <h3 className="text-label-sm text-on-surface-variant mb-2">Your Liquidity (LP)</h3>
             <div className="text-display-lg-mobile md:text-[32px] text-primary" style={{ textShadow: '0 0 12px rgba(255, 184, 116, 0.3)' }}>
-              <CountUp prefix="$" end={5000.00} decimals={2} />
+              <CountUp end={lp} decimals={2} />
             </div>
-            <div className="mt-4 flex items-center gap-2">
-              <span className="bg-secondary-container/20 text-secondary border border-secondary/20 text-data-md px-2 py-0.5 rounded-full text-xs flex items-center">
-                <span className="material-symbols-outlined text-[14px] mr-1">trending_up</span> +2.4%
-              </span>
-              <span className="text-body-md text-on-surface-variant text-sm">vs last week</span>
-            </div>
+            <div className="mt-4 text-body-md text-on-surface-variant text-sm">{fmt(poolShare)}% of the pool</div>
           </motion.div>
 
-          {/* Stat Card 2 */}
           <motion.div variants={itemVariants} className="glass-card p-6 shadow-lg">
-            <h3 className="text-label-sm text-on-surface-variant mb-2">Total Fees Earned</h3>
+            <h3 className="text-label-sm text-on-surface-variant mb-2">Pool TVL</h3>
             <div className="text-display-lg-mobile md:text-[32px] text-on-background">
-              <CountUp prefix="$" end={125.40} decimals={2} />
+              <CountUp end={tvl} decimals={2} suffix=" tok" />
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2 md:justify-between">
-              <span className="text-data-md text-on-surface-variant text-sm border border-border-subtle px-2 py-0.5 rounded">
-                Claimable: $42.10
-              </span>
-              <button className="text-primary text-label-sm hover:underline ml-auto md:ml-0">Claim All</button>
-            </div>
+            <div className="mt-4 text-body-md text-on-surface-variant text-sm">{fmt(reserves.pt)} PT · {fmt(reserves.base)} stSTX</div>
           </motion.div>
         </motion.div>
       </div>
 
-      {/* Active Pools */}
-      <motion.div 
-        className="mb-stack-lg"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <h2 className="text-headline-md text-on-background mb-stack-md border-b border-border-subtle pb-2">Active Pools</h2>
-        
-        <div className="flex flex-col gap-4">
-          {pools.map((pool, i) => (
-            <motion.div key={i} variants={itemVariants} className="glass-card p-6 group">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center border border-border-subtle">
-                    <Droplet className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-headline-md text-lg text-on-background">{pool.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="bg-surface-container text-on-surface-variant text-label-sm px-2 py-0.5 rounded border border-border-subtle">
-                        {pool.type}
-                      </span>
-                      <span className="text-body-md text-on-surface-variant text-sm">Fee: {pool.fee}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-8 w-full md:w-auto">
-                  <div>
-                    <div className="text-label-sm text-on-surface-variant mb-1">Your Liquidity</div>
-                    <div className="text-data-md text-on-background">${pool.yourLiquidity.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-label-sm text-on-surface-variant mb-1">Pool TVL</div>
-                    <div className="text-data-md text-on-background">${pool.poolTvl}M</div>
-                  </div>
-                  <div>
-                    <div className="text-label-sm text-on-surface-variant mb-1">Fee APR</div>
-                    <div className="text-data-md text-secondary">{pool.feeApr}%</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 w-full md:w-auto pt-4 md:pt-0 border-t border-border-subtle md:border-t-0">
-                  <button className="flex-1 md:flex-none border border-border-subtle text-on-background text-label-sm px-6 py-2.5 rounded-lg hover:border-primary hover:text-primary transition-colors">
-                    Remove
-                  </button>
-                  <button className="flex-1 md:flex-none bg-primary/10 border border-primary/20 text-primary text-label-sm px-6 py-2.5 rounded-lg hover:bg-primary hover:text-on-primary transition-colors">
-                    Add
-                  </button>
-                </div>
-                
+      <motion.div className="mb-stack-lg" variants={containerVariants} initial="hidden" animate="visible">
+        <h2 className="text-headline-md text-on-background mb-stack-md border-b border-border-subtle pb-2">PT / stSTX Pool</h2>
+
+        <motion.div variants={itemVariants} className="glass-card p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center border border-border-subtle">
+              <Droplet className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-headline-md text-lg text-on-background">PT / stSTX</h3>
+              <div className="text-body-md text-on-surface-variant text-sm">Constant-product pool · 0.3% fee</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+            {/* Add */}
+            <div className="bg-surface-container-lowest rounded-lg p-5 border border-border-subtle">
+              <h4 className="text-label-sm text-on-surface-variant mb-3">Add Liquidity</h4>
+              <div className="flex items-center justify-between bg-surface-container rounded-lg p-3 mb-3">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={addBase}
+                  onChange={(e) => setAddBase(e.target.value.replace(/[^0-9.]/g, ''))}
+                  className="bg-transparent border-none outline-none text-data-lg text-on-surface w-full"
+                  placeholder="0.00"
+                />
+                <span className="text-label-sm text-on-surface shrink-0">stSTX</span>
               </div>
-            </motion.div>
-          ))}
-        </div>
+              <p className="text-[12px] text-on-surface-variant mb-3">
+                Pairs with about {fmt((Number(addBase) || 0) * ptPerBase)} PT at the current ratio.
+              </p>
+              <button onClick={handleAdd} disabled={busy} className="w-full py-3 rounded-lg bg-primary/10 border border-primary/30 text-primary text-label-sm hover:bg-primary hover:text-on-primary transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+                {connected ? 'Add Liquidity' : 'Connect Wallet'}
+              </button>
+            </div>
+
+            {/* Remove */}
+            <div className="bg-surface-container-lowest rounded-lg p-5 border border-border-subtle">
+              <h4 className="text-label-sm text-on-surface-variant mb-3">Remove Liquidity</h4>
+              <div className="flex items-center justify-between bg-surface-container rounded-lg p-3 mb-3">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={removeLp}
+                  onChange={(e) => setRemoveLp(e.target.value.replace(/[^0-9.]/g, ''))}
+                  className="bg-transparent border-none outline-none text-data-lg text-on-surface w-full"
+                  placeholder="0.00"
+                />
+                <button onClick={() => setRemoveLp(String(lp))} className="text-[12px] text-secondary shrink-0">MAX</button>
+              </div>
+              <p className="text-[12px] text-on-surface-variant mb-3">You have {fmt(lp)} LP tokens.</p>
+              <button onClick={handleRemove} disabled={busy} className="w-full py-3 rounded-lg border border-border-subtle text-on-background text-label-sm hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+                {connected ? 'Remove Liquidity' : 'Connect Wallet'}
+              </button>
+            </div>
+          </div>
+
+          {txid && (
+            <a href={explorerTx(txid)} target="_blank" rel="noreferrer" className="mt-4 flex items-center justify-center gap-2 text-[13px] text-secondary hover:text-on-surface transition-colors">
+              Transaction submitted, view on explorer <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+          {error && <p className="mt-4 text-[13px] text-center text-red-400">{error}</p>}
+        </motion.div>
       </motion.div>
     </div>
   );

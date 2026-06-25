@@ -153,4 +153,48 @@ export async function swapPtForBase(user: string, tokens: number, slippagePct = 
   );
 }
 
+// ---------- liquidity ----------
+export async function getLpShares(who: string): Promise<number> {
+  return fromMicro(asNum(await read('amm', 'get-lp-shares', [Cl.principal(who)])));
+}
+
+export async function getTotalLp(): Promise<{ lp: number; lpMicro: bigint }> {
+  const m = BigInt(asNum(await read('amm', 'get-total-lp')));
+  return { lp: fromMicro(m), lpMicro: m };
+}
+
+// Add liquidity: user sends exactly `baseTokens` stSTX and up to `maxPtTokens` PT.
+export function addLiquidity(user: string, baseTokens: number, maxPtTokens: number) {
+  const baseAmount = toMicro(baseTokens);
+  const maxPt = toMicro(maxPtTokens);
+  return call(
+    'amm',
+    'add-liquidity',
+    [Cl.uint(baseAmount), Cl.uint(maxPt)],
+    [
+      Pc.principal(user).willSendEq(baseAmount).ft(C.mockStstx, FT.mockStstx),
+      Pc.principal(user).willSendLte(maxPt).ft(C.pt, FT.pt),
+    ],
+  );
+}
+
+// Remove liquidity: AMM returns at least the slippage-protected base and PT for the LP burned.
+export async function removeLiquidity(lpTokens: number, slippagePct = 1) {
+  const lpAmount = toMicro(lpTokens);
+  const { baseMicro, ptMicro } = await getReserves();
+  const { lpMicro } = await getTotalLp();
+  const factor = BigInt(Math.floor((100 - slippagePct) * 100));
+  const baseOut = lpMicro > 0n ? (lpAmount * baseMicro) / lpMicro : 0n;
+  const ptOut = lpMicro > 0n ? (lpAmount * ptMicro) / lpMicro : 0n;
+  return call(
+    'amm',
+    'remove-liquidity',
+    [Cl.uint(lpAmount)],
+    [
+      Pc.principal(C.amm).willSendGte((baseOut * factor) / 10000n).ft(C.mockStstx, FT.mockStstx),
+      Pc.principal(C.amm).willSendGte((ptOut * factor) / 10000n).ft(C.pt, FT.pt),
+    ],
+  );
+}
+
 export { Cl };

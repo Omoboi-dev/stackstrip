@@ -1,0 +1,52 @@
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: https://api.testnet.hiro.so
+bitcoin-node: http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332
+plan:
+  batches:
+  - id: 0
+    transactions:
+    - transaction-type: contract-publish
+      contract-name: sip-010-trait
+      expected-sender: ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R
+      cost: 4800
+      path: contracts/sip-010-trait.clar
+      anchor-block-only: true
+      clarity-version: 3
+    - transaction-type: contract-publish
+      contract-name: mock-ststx
+      expected-sender: ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R
+      cost: 19360
+      path: contracts/mock-ststx.clar
+      anchor-block-only: true
+      clarity-version: 3
+    - transaction-type: contract-publish
+      contract-name: pt-token
+      expected-sender: ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R
+      cost: 19940
+      path: contracts/pt-token.clar
+      anchor-block-only: true
+      clarity-version: 3
+    - transaction-type: contract-publish
+      contract-name: amm
+      expected-sender: ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R
+      cost: 48100
+      path: contracts/amm.clar
+      anchor-block-only: true
+      clarity-version: 3
+    - transaction-type: contract-publish
+      contract-name: yt-token
+      expected-sender: ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R
+      cost: 19970
+      path: contracts/yt-token.clar
+      anchor-block-only: true
+      clarity-version: 3
+    - transaction-type: contract-publish
+      contract-name: yield-market
+      expected-sender: ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R
+      cost: 36720
+      path: contracts/yield-market.clar
+      anchor-block-only: true
+      clarity-version: 3
+    epoch: '3.4'

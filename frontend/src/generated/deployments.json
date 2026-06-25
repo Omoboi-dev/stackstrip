@@ -1,0 +1,36 @@
+{
+  "network": "testnet",
+  "deployed_at": "2026-06-25T15:02:59.211185746+00:00",
+  "contracts": {
+    "mock-ststx": {
+      "contract_id": "ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.mock-ststx",
+      "tx_id": "0xd019b2d8f9c638bfb6cb7fa1194f934247e60d381ab696e226b85147ac0e2d92",
+      "block_height": 0
+    },
+    "pt-token": {
+      "contract_id": "ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.pt-token",
+      "tx_id": "0xd2099a3a29af7b35feea4f92bb9662452c14974cdbb6dfdadc3de4faee396bcf",
+      "block_height": 0
+    },
+    "yt-token": {
+      "contract_id": "ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.yt-token",
+      "tx_id": "0x53ab6819cc9910c3312f636584a2fe2a3c165a98fc598668a784ea400febce92",
+      "block_height": 0
+    },
+    "amm": {
+      "contract_id": "ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.amm",
+      "tx_id": "0x3c1d8b9ff08cc263271bcdbc6d21d4ce559cca2bf7a39343e7485e537115bf38",
+      "block_height": 0
+    },
+    "yield-market": {
+      "contract_id": "ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.yield-market",
+      "tx_id": "0x6260b2c087188096f425c1a17ec7fe2c3df8a3a105f4deaedee6e0645a64c6e8",
+      "block_height": 0
+    },
+    "sip-010-trait": {
+      "contract_id": "ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.sip-010-trait",
+      "tx_id": "0x2ba6929fb158f11c5d10739492b1f86891181586a5478030d4bd34cc2d94470e",
+      "block_height": 0
+    }
+  }
+}

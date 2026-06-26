@@ -26,6 +26,7 @@ frontend/out/
 # Local planning docs (kept local, not committed)
 IMPLEMENTATION.md
 IMPLEMENTATION.pdf
+SUBMISSION.md
 
 # Clarinet generated artifacts
 contracts/deployments/default.simnet-plan.yaml

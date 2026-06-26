@@ -23,6 +23,7 @@ export function MarketDetail() {
   const [reserves, setReserves] = useState({ base: 0, pt: 0 });
   const [market, setMarket] = useState({ settled: false, matured: false, maturity: 0 });
   const [redeemAmt, setRedeemAmt] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -30,6 +31,7 @@ export function MarketDetail() {
       setReserves({ base: r.base, pt: r.pt });
       const info = await getMarketInfo();
       setMarket({ settled: info.settled, matured: info.matured, maturity: info.maturity });
+      setLoaded(true);
       if (address) {
         const [base, pt, yt] = await Promise.all([
           getBalance('mockStstx', address),
@@ -72,6 +74,13 @@ export function MarketDetail() {
       price: Number((ptPrice + (1 - ptPrice) * t).toFixed(4)),
     };
   });
+  const tvl = reserves.base + reserves.pt;
+  const fixedReturnPct = ptPrice > 0 ? (1 / ptPrice - 1) * 100 : 0;
+  const inFee = amt * 0.997;
+  const estBuyPt = reserves.base > 0 ? (reserves.pt * inFee) / (reserves.base + inFee) : 0;
+  const estSellBase = reserves.pt > 0 ? (reserves.base * inFee) / (reserves.pt + inFee) : 0;
+  const receiveLabel = activeTab === 'mint' ? 'PT + YT' : tradeAction === 'buy' ? 'PT' : 'stSTX';
+  const receiveEst = activeTab === 'mint' ? amt : tradeAction === 'buy' ? estBuyPt : estSellBase;
   const handleFaucet = () => run(() => faucet(address!));
   const handleAction = () => {
     if (!connected || !address) return connectWallet();
@@ -107,26 +116,26 @@ export function MarketDetail() {
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="flex items-center gap-2">
-              <h1 className="text-display-lg-mobile md:text-display-lg text-on-background">PT-sBTC</h1>
+              <h1 className="text-display-lg-mobile md:text-display-lg text-on-background">stSTX Yield Market</h1>
             </div>
             <span className="bg-secondary-container/20 text-secondary border border-secondary/30 rounded-full px-3 py-1 text-data-md ml-2 hidden sm:inline-block">
-              Fixed 8.42% APY
+              PT {loaded ? ptPrice.toFixed(3) : '...'} stSTX
             </span>
           </div>
           <p className="text-body-md text-on-surface-variant flex items-center gap-2 flex-wrap">
-            Maturity: <span className="text-data-md text-on-background">28 JUN 2027</span>
+            Maturity: <span className="text-data-md text-on-background">Block {loaded ? market.maturity.toLocaleString() : '...'}</span>
             <span className="w-1 h-1 rounded-full bg-outline-variant mx-1"></span>
-            Underlying: <span className="text-data-md text-on-background">sBTC</span>
+            Underlying: <span className="text-data-md text-on-background">stSTX</span>
           </p>
         </div>
         <div className="flex gap-stack-md w-full md:w-auto">
           <div className="bg-surface-container border border-border-subtle rounded-lg p-3 flex-1 md:min-w-[120px]">
-            <p className="text-label-sm text-on-surface-variant mb-1">Total Liquidity</p>
-            <p className="text-data-lg text-on-background">$24.5M</p>
+            <p className="text-label-sm text-on-surface-variant mb-1">Pool TVL</p>
+            <p className="text-data-lg text-on-background">{loaded ? `${fmt(tvl)} tok` : '...'}</p>
           </div>
           <div className="bg-surface-container border border-border-subtle rounded-lg p-3 flex-1 md:min-w-[120px]">
-            <p className="text-label-sm text-on-surface-variant mb-1">24h Volume</p>
-            <p className="text-data-lg text-on-background">$1.2M</p>
+            <p className="text-label-sm text-on-surface-variant mb-1">PT Price</p>
+            <p className="text-data-lg text-on-background">{loaded ? `${ptPrice.toFixed(3)} stSTX` : '...'}</p>
           </div>
         </div>
       </motion.div>
@@ -354,9 +363,9 @@ export function MarketDetail() {
               <div className="bg-surface-container-lowest rounded-lg p-4 border border-border-subtle">
                 <label className="text-label-sm text-on-surface-variant block mb-1">Receive (Est.)</label>
                 <div className="flex items-center justify-between">
-                  <input type="text" className={`bg-transparent border-none outline-none text-display-lg-mobile p-0 w-full ${assetType === 'PT' ? 'text-primary' : 'text-secondary'}`} readOnly value="1084.20" />
+                  <input type="text" className="bg-transparent border-none outline-none text-display-lg-mobile p-0 w-full text-primary" readOnly value={loaded ? receiveEst.toFixed(2) : '...'} />
                   <div className="flex items-center p-2 shrink-0">
-                    <span className={`text-label-sm font-bold ${assetType === 'PT' ? 'text-primary' : 'text-secondary'}`}>{assetType}</span>
+                    <span className="text-label-sm font-bold text-primary">{receiveLabel}</span>
                   </div>
                 </div>
               </div>
@@ -365,7 +374,7 @@ export function MarketDetail() {
               <div className="bg-primary-container border border-primary/20 rounded-lg p-3 flex items-start gap-3">
                 <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <p className="text-body-md text-[14px] text-on-surface leading-snug">
-                  You are locking in a <strong className="text-primary text-data-md">8.42%</strong> fixed APY. Hold PT until maturity to guarantee this return.
+                  PT trades at <strong className="text-primary text-data-md">{loaded ? ptPrice.toFixed(3) : '...'} stSTX</strong> and redeems for 1.0 at maturity, a fixed <strong className="text-primary text-data-md">{loaded ? fixedReturnPct.toFixed(1) : '...'}%</strong> gain if held to maturity.
                 </p>
               </div>
 
@@ -377,11 +386,11 @@ export function MarketDetail() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-label-sm text-on-surface-variant">Max Slippage</span>
-                  <span className="text-data-md text-[12px] text-on-surface">0.5%</span>
+                  <span className="text-data-md text-[12px] text-on-surface">1%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-label-sm text-on-surface-variant">Network Fee</span>
-                  <span className="text-data-md text-[12px] text-on-surface">~$0.45</span>
+                  <span className="text-data-md text-[12px] text-on-surface">Set in wallet</span>
                 </div>
               </div>
 

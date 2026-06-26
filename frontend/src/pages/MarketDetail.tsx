@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowDown, Info, Droplet, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowDown, Info, Droplet, Loader2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useWallet } from '../lib/wallet';
+import { useToast } from '../components/ui/Toast';
 import { deposit, swapBaseForPt, swapPtForBase, faucet, getBalance, getReserves, getMarketInfo, settle, redeemPt, redeemYt, explorerTx } from '../lib/stacks';
 
 const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -15,10 +16,9 @@ export function MarketDetail() {
   const [assetType, setAssetType] = useState('PT');
 
   const { address, connected, connectWallet } = useWallet();
+  const { push } = useToast();
   const [amount, setAmount] = useState('1000');
   const [busy, setBusy] = useState(false);
-  const [txid, setTxid] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [bal, setBal] = useState({ base: 0, pt: 0, yt: 0 });
   const [reserves, setReserves] = useState({ base: 0, pt: 0 });
   const [market, setMarket] = useState({ settled: false, matured: false, maturity: 0 });
@@ -49,14 +49,13 @@ export function MarketDetail() {
 
   const run = async (fn: () => Promise<any>) => {
     setBusy(true);
-    setError(null);
-    setTxid(null);
     try {
       const res: any = await fn();
-      setTxid(res?.txid ?? res?.txId ?? null);
+      const tx = res?.txid ?? res?.txId ?? null;
+      push({ type: 'info', message: 'Transaction submitted', href: tx ? explorerTx(tx) : undefined });
       setTimeout(loadData, 8000);
     } catch (e: any) {
-      setError(e?.message ?? 'Transaction cancelled');
+      push({ type: 'error', message: e?.message ?? 'Transaction cancelled' });
     } finally {
       setBusy(false);
     }
@@ -274,12 +273,6 @@ export function MarketDetail() {
                       <p className="text-[12px] text-on-surface-variant text-center">PT redeems for principal, YT redeems for accrued yield.</p>
                     </>
                   )}
-                  {txid && (
-                    <a href={explorerTx(txid)} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 text-[13px] text-secondary hover:text-on-surface transition-colors">
-                      Transaction submitted, view on explorer <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                  {error && <p className="text-[13px] text-center text-red-400">{error}</p>}
                 </div>
               ) : (
                 <>
@@ -401,17 +394,6 @@ export function MarketDetail() {
                 {actionLabel}
               </button>
 
-              {txid && (
-                <a
-                  href={explorerTx(txid)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-2 text-[13px] text-secondary hover:text-on-surface transition-colors"
-                >
-                  Transaction submitted, view on explorer <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-              {error && <p className="text-[13px] text-center text-red-400">{error}</p>}
               </>
               )}
             </div>

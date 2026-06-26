@@ -14,10 +14,12 @@ import { MarketDetail } from './pages/MarketDetail';
 import { Portfolio } from './pages/Portfolio';
 import { Liquidity } from './pages/Liquidity';
 import { WalletProvider } from './lib/wallet';
+import { ToastProvider } from './components/ui/Toast';
 
 export default function App() {
   return (
     <WalletProvider>
+    <ToastProvider>
     <Router>
       <div className="flex flex-col min-h-screen relative overflow-hidden">
         {/* Background Decorative Elements */}
@@ -40,6 +42,7 @@ export default function App() {
         </div>
       </div>
     </Router>
+    </ToastProvider>
     </WalletProvider>
   );
 }

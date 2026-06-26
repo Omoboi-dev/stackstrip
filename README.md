@@ -10,6 +10,9 @@ Transfer, paid in actual Bitcoin with no wrapping and no bridging.
 
 Status: live on Stacks testnet, with a working app and a passing test suite.
 
+Live app: https://stackstrip.vercel.app
+Repo: https://github.com/Omoboi-dev/stackstrip
+
 ## The idea in plain words
 
 Think of stSTX as a Bitcoin savings account: hold it and it earns yield, paid in

@@ -57,7 +57,7 @@ export function Landing() {
           </motion.h1>
           
           <motion.p variants={itemVariants} className="text-body-md text-on-surface-variant max-w-2xl text-lg md:text-xl mb-6">
-            The first fixed-income market for Bitcoin, built on Stacks. Separate your yield from your principal and hedge against volatility.
+            A fixed income market for native Bitcoin yield, built on Stacks. Separate your yield from your principal and hedge against volatility.
           </motion.p>
           
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-6">

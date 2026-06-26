@@ -1,12 +1,12 @@
 # Stackstrip
 
-The first fixed income market for Bitcoin, built on Stacks.
+Fixed income for native Bitcoin yield, built on Stacks.
 
 Stackstrip takes a token that earns native Bitcoin staking yield and splits it into
 two tradable pieces, so anyone can lock in a fixed Bitcoin yield or trade the yield
-on its own. It is a Bitcoin native version of what Pendle does for Ethereum, and it
-can only exist on Stacks, because Stacks is the only chain that produces real,
-native Bitcoin yield through Proof of Transfer.
+on its own. It is a Bitcoin native version of what Pendle does for Ethereum, but
+built on the real, native Bitcoin yield that Stacks produces through Proof of
+Transfer, paid in actual Bitcoin with no wrapping and no bridging.
 
 Status: live on Stacks testnet, with a working app and a passing test suite.
 
@@ -33,9 +33,12 @@ market sets the price of each.
 
 ## Why it matters
 
-Bitcoin has no fixed income market. Every Bitcoin yield today is variable. Fixed
-income is the largest asset class in traditional finance, and it does not exist for
-Bitcoin yet. Stackstrip creates it, on the one chain where the yield actually lives.
+Bitcoin has plenty of variable yield, but no way to fix it or trade it on Stacks.
+Fixed rate Bitcoin yield exists elsewhere only on wrapped, bridged Bitcoin on other
+chains, where the yield comes from restaking and incentives. There is no fixed
+income market for the native Bitcoin yield that Stacks produces through Proof of
+Transfer, paid in real Bitcoin with no bridging. Stackstrip creates it, where that
+native yield actually lives.
 
 ## Features
 

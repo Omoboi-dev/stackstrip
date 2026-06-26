@@ -11,7 +11,6 @@ Transfer, paid in actual Bitcoin with no wrapping and no bridging.
 Status: live on Stacks testnet, with a working app and a passing test suite.
 
 Live app: https://stackstrip.vercel.app
-Repo: https://github.com/Omoboi-dev/stackstrip
 
 ## The idea in plain words
 
@@ -101,13 +100,13 @@ stackstrip/
 
 Deployer: `ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R`
 
-| Contract | Purpose |
-|---|---|
-| `mock-ststx` | A yield bearing token used as the stSTX stand in on testnet |
-| `pt-token` | The Principal Token (SIP-010) |
-| `yt-token` | The Yield Token (SIP-010) |
-| `yield-market` | Deposit, split, settle, and redeem |
-| `amm` | A constant product market for PT against stSTX |
+| Contract name | Contract id | Purpose |
+|---|---|---|
+| `mock-ststx` | `ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.mock-ststx` | A yield bearing token used as the stSTX stand in on testnet |
+| `pt-token` | `ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.pt-token` | The Principal Token (SIP-010) |
+| `yt-token` | `ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.yt-token` | The Yield Token (SIP-010) |
+| `yield-market` | `ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.yield-market` | Deposit, split, settle, and redeem |
+| `amm` | `ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R.amm` | A constant product market for PT against stSTX |
 
 Explorer: https://explorer.hiro.so/address/ST1D9X179MAJ9XA7KHSZJ48CN39DVB6TAQDYST34R?chain=testnet
 
